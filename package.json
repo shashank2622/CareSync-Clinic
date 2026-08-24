@@ -1,0 +1,29 @@
+{
+  "name": "healthcare-appointment-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-grade Healthcare Appointment & Follow-up Manager with AI Clinical Summaries",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "build": "npm --workspace=backend run build && npm --workspace=frontend run build",
+    "db:generate": "npm --workspace=backend run prisma:generate",
+    "db:migrate": "npm --workspace=backend run prisma:migrate",
+    "db:seed": "npm --workspace=backend run prisma:seed",
+    "test": "npm --workspace=backend run test"
+  },
+  "keywords": [
+    "healthcare",
+    "appointment-manager",
+    "ai-clinical-summaries",
+    "google-calendar-oauth",
+    "bullmq",
+    "prisma"
+  ],
+  "author": "Google Deepmind Pair-Programming",
+  "license": "MIT"
+}
