@@ -2,8 +2,10 @@ import { appointmentRepository, AppointmentRepository } from '../repositories/ap
 import { slotRepository, SlotRepository } from '../repositories/slot.repository.js';
 import { doctorRepository, DoctorRepository } from '../repositories/doctor.repository.js';
 import { userRepository, UserRepository } from '../repositories/user.repository.js';
+import { emailService, EmailService } from './email.service.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
+import { logger } from '../utils/logger.js';
 import {
   CreateHoldInput,
   ConfirmAppointmentInput,
@@ -20,7 +22,8 @@ export class AppointmentService {
     private appointmentRepo: AppointmentRepository = appointmentRepository,
     private slotRepo: SlotRepository = slotRepository,
     private doctorRepo: DoctorRepository = doctorRepository,
-    private userRepo: UserRepository = userRepository
+    private userRepo: UserRepository = userRepository,
+    private email: EmailService = emailService
   ) {}
 
   private generateAppointmentNumber(): string {
@@ -158,6 +161,11 @@ export class AppointmentService {
           : undefined,
       });
 
+      // Asynchronously trigger email confirmation (non-blocking)
+      this.email.sendBookingConfirmation(appointment.id).catch((err) => {
+        logger.warn(`Failed to dispatch booking confirmation email: ${err.message}`);
+      });
+
       return appointment;
     } catch (err: any) {
       if (err.message === 'SLOT_ALREADY_BOOKED') {
@@ -257,6 +265,7 @@ export class AppointmentService {
     }
 
     let newStatus: AppointmentStatus = AppointmentStatus.CANCELLED_BY_PATIENT;
+    let cancelledBy = user.fullName;
     if (user.role === Role.DOCTOR) newStatus = AppointmentStatus.CANCELLED_BY_DOCTOR;
     if (user.role === Role.ADMIN) newStatus = AppointmentStatus.CANCELLED_BY_ADMIN;
 
@@ -265,6 +274,11 @@ export class AppointmentService {
       newStatus,
       input.reason
     );
+
+    // Asynchronously dispatch cancellation emails
+    this.email.sendCancellationNotification(id, input.reason, cancelledBy).catch((err) => {
+      logger.warn(`Failed to dispatch cancellation email: ${err.message}`);
+    });
 
     return updated;
   }
@@ -307,6 +321,11 @@ export class AppointmentService {
       newHold.slotEndTime,
       input.reason
     );
+
+    // Asynchronously dispatch reschedule emails
+    this.email.sendRescheduleNotification(id, input.reason).catch((err) => {
+      logger.warn(`Failed to dispatch reschedule email: ${err.message}`);
+    });
 
     return updated;
   }
