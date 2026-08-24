@@ -2,7 +2,7 @@
 
 <div align="center">
 
-# [Website](care-sync-clinic-seven.vercel.app)
+# [Website](https://care-sync-clinic-seven.vercel.app/)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
