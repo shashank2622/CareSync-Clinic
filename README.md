@@ -14,7 +14,7 @@
 
 **A production-ready, submission-compliant healthcare platform featuring concurrency-safe doctor reservations, AI clinical intake summaries with urgency scoring, automated daily medication schedules, and two-way Google Calendar synchronization.**
 
-[Quickstart](#-quickstart-guide-local-setup) • [Demo Accounts](#-pre-seeded-demo-accounts-1-click-login) • [Architecture](#-architecture--system-design) • [API Catalog](#-rest-api-endpoints-catalog) • [AI Prompts](#-google-gemini-ai-prompts) • [Deployment](#-vercel-cloud-deployment)
+[Quickstart](#-quickstart-guide-local-setup) • [Demo Accounts](#-pre-seeded-demo-accounts-1-click-login) • [Architecture](#-architecture--system-design) • [API Catalog](#-rest-api-endpoints-catalog) • [AI Prompts](#-google-gemini-ai-prompts) • [Deployment](care-sync-clinic-seven.vercel.app)
 
 </div>
 
