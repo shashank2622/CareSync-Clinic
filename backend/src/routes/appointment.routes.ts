@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { appointmentController } from '../controllers/appointment.controller.js';
 import { symptomController } from '../controllers/symptom.controller.js';
 import { preVisitController } from '../controllers/previsit.controller.js';
+import { postVisitController } from '../controllers/postvisit.controller.js';
 import { clinicalController } from '../controllers/clinical.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validateRequest } from '../middleware/validation.middleware.js';
@@ -44,5 +45,10 @@ router.post('/:id/previsit-summary/retry', preVisitController.retrySummary);
 router.post('/:id/visit-notes', validateRequest({ body: submitVisitNotesSchema }), clinicalController.submitVisitNotes);
 router.get('/:id/visit-notes', clinicalController.getVisitNotes);
 router.get('/:id/prescription', clinicalController.getPrescription);
+
+// Post-Visit AI Patient Summary
+router.get('/:id/postvisit-summary', postVisitController.getSummary);
+router.post('/:id/postvisit-summary/generate', postVisitController.generateSummary);
+router.post('/:id/postvisit-summary/retry', postVisitController.retrySummary);
 
 export default router;
