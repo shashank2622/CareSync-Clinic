@@ -20,11 +20,11 @@ export function getScheduledTimesForFrequency(frequency: ReminderFrequency): str
 export function calculateNextRunDate(scheduledTime: string, fromDate: Date = new Date()): Date {
   const [hours, minutes] = scheduledTime.split(':').map(Number);
   const nextRun = new Date(fromDate);
-  nextRun.setHours(hours, minutes, 0, 0);
+  nextRun.setUTCHours(hours, minutes, 0, 0);
 
-  // If time has already passed today, schedule for tomorrow
+  // If time has already passed today in UTC, schedule for tomorrow
   if (nextRun <= fromDate) {
-    nextRun.setDate(nextRun.getDate() + 1);
+    nextRun.setUTCDate(nextRun.getUTCDate() + 1);
   }
 
   return nextRun;
