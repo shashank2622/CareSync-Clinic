@@ -250,3 +250,5 @@ Follow-up Instructions:
 
 ## 📄 License
 MIT License • Developed for Healthcare Evaluation Submission
+#   C a r e S y n c - C l i n i c  
+ 
