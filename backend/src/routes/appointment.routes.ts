@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { appointmentController } from '../controllers/appointment.controller.js';
 import { symptomController } from '../controllers/symptom.controller.js';
+import { preVisitController } from '../controllers/previsit.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validateRequest } from '../middleware/validation.middleware.js';
 import {
@@ -31,5 +32,10 @@ router.patch('/:id/reschedule', validateRequest({ body: rescheduleAppointmentSch
 // Symptoms Intake & Retrieval
 router.post('/:id/symptoms', validateRequest({ body: submitSymptomsSchema }), symptomController.submitSymptoms);
 router.get('/:id/symptoms', symptomController.getSymptoms);
+
+// Pre-Visit AI Clinical Summary
+router.get('/:id/previsit-summary', preVisitController.getSummary);
+router.post('/:id/previsit-summary/generate', preVisitController.generateSummary);
+router.post('/:id/previsit-summary/retry', preVisitController.retrySummary);
 
 export default router;
