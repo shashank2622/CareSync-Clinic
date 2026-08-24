@@ -1,49 +1,77 @@
 # 🏥 CareSync | Healthcare Appointment & Follow-up Manager
 
-> **Production-Grade, Submission-Compliant Healthcare Platform** featuring concurrency-safe doctor reservations, AI clinical intake summaries with urgency scoring, automated daily medication schedules, and two-way Google Calendar synchronization.
+<div align="center">
+
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![NodeJS](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-6.4-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Gemini_1.5_Flash-AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)
+![Google Calendar](https://img.shields.io/badge/Google_Calendar-OAuth_2.0-4285F4?style=for-the-badge&logo=googlecalendar&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-Deployable-black?style=for-the-badge&logo=vercel&logoColor=white)
+
+**A production-ready, submission-compliant healthcare platform featuring concurrency-safe doctor reservations, AI clinical intake summaries with urgency scoring, automated daily medication schedules, and two-way Google Calendar synchronization.**
+
+[Quickstart](#-quickstart-guide-local-setup) • [Demo Accounts](#-pre-seeded-demo-accounts-1-click-login) • [Architecture](#-architecture--system-design) • [API Catalog](#-rest-api-endpoints-catalog) • [AI Prompts](#-google-gemini-ai-prompts) • [Deployment](#-vercel-cloud-deployment)
+
+</div>
 
 ---
 
-## 🌟 Architectural Highlights
+## 🌟 Executive Summary & Key Highlights
 
-- 🔒 **Zero Double-Booking Guarantee:** 5-minute pessimistic slot holds with row-level PostgreSQL transaction locks and composite unique indexes `(doctorId, slotStartTime)`.
-- 🧠 **Google Gemini 1.5 AI Clinical Layer:**
-  - **Pre-Visit Analysis:** Analyzes patient symptoms, categorizes clinical urgency (`LOW`, `MEDIUM`, `HIGH`, `EMERGENCY`), and generates suggested diagnostic inquiries for physicians.
-  - **Post-Visit Patient Summary:** Converts doctor's clinical findings and diagnoses into empathetic, plain-language patient care instructions and medication schedules.
-  - **Graceful Fallback State Machine:** Offline mock provider and resilient rule-based fallbacks ensure APIs never fail or crash if API limits are reached.
-- 💊 **Automated Medication Reminder Engine:** Background BullMQ + Redis queue worker calculates daily dose schedules (`ONCE_DAILY`, `TWICE_DAILY`, `EVERY_8_HOURS`, etc.) with patient pause/resume toggles. Decoupled from the frontend.
+- 🔒 **Zero Double-Booking Guarantee:** 5-minute pessimistic slot holds backed by row-level PostgreSQL transaction locks and composite unique constraints `(doctorId, slotStartTime)`.
+- 🧠 **Google Gemini 1.5 Clinical AI Layer:**
+  - **Pre-Visit Clinical Prep:** Categorizes urgency (`LOW`, `MEDIUM`, `HIGH`, `EMERGENCY`) and drafts targeted diagnostic inquiries for the doctor based on patient symptoms.
+  - **Post-Visit Patient Summary:** Converts doctor's clinical findings and diagnoses into clear, encouraging, plain-language patient care instructions and medication schedules.
+  - **Fault-Tolerant Fallback:** Non-blocking execution ensures consultations never crash if API limits or network drops occur.
+- 💊 **Automated Medication Reminder Engine:** Background BullMQ + Redis worker calculates daily dose schedules (`ONCE_DAILY`, `TWICE_DAILY`, `EVERY_8_HOURS`, etc.) with patient pause/resume toggles. Decoupled from the frontend.
 - 📅 **Google Calendar OAuth 2.0 Integration:** Two-way calendar sync with AES-256-GCM encrypted token storage. Automatically creates events on booking, patches on reschedule, and removes on cancellation.
 - 🚨 **Doctor Leave Conflict Strategy:** Admin schedules physician leave $\to$ active consultations transition atomically to `CANCELLED_DOCTOR_LEAVE` $\to$ slots are released $\to$ automated patient email alerts are dispatched with 1-click reschedule links.
-- 👥 **Role-Based Portals (RBAC):** Dedicated views and permissions for **Patients**, **Physicians**, and **Clinic Administrators**.
+- 👥 **Role-Based Portals (RBAC):** Dedicated workflows and views for **Patients**, **Physicians**, and **Clinic Administrators**.
 
 ---
 
-## 🏗️ Tech Stack
+## 🏗️ Architecture & System Design
 
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query (React Query v5), React Router v6, Lucide Icons, date-fns |
-| **Backend** | Node.js, Express, TypeScript, Zod Schema Validation, Helmet, Rate-Limiter, Structured JSON Logger |
-| **Database & ORM** | PostgreSQL 16, Prisma ORM (18 Models, 10 Enums, Composite Indexes & Foreign Keys) |
-| **Queue & Cache** | Redis, BullMQ (with automatic 3-tier exponential backoff retries) |
-| **AI / LLM** | Google Gemini 1.5 Flash (`@google/generative-ai`) with modular provider abstraction |
-| **Email Service** | Nodemailer (SMTP / Ethereal) with responsive healthcare HTML email templates |
-| **Calendar Sync** | Google APIs (`googleapis`) with AES-256-GCM token encryption at rest |
-| **Testing** | Jest, ts-jest, Supertest |
+```
+                               ┌────────────────────────────────────────────────────────┐
+                               │                 CareSync Frontend UI                   │
+                               │          React 18 + Vite + Tailwind + TanStack         │
+                               └──────────────────────────┬─────────────────────────────┘
+                                                          │
+                                                    REST API (JWT)
+                                                          │
+                               ┌──────────────────────────▼─────────────────────────────┐
+                               │                 CareSync Backend API                   │
+                               │          Express + TypeScript + Zod Validation         │
+                               └───┬─────────────┬──────────────┬──────────────┬────────┘
+                                   │             │              │              │
+                    ┌──────────────▼─────┐ ┌─────▼────────┐ ┌───▼────────┐ ┌───▼────────┐
+                    │    PostgreSQL 16   │ │ Redis/BullMQ │ │ Google     │ │ Google     │
+                    │   (Prisma 18 Mod)  │ │ Queue Worker │ │ Gemini 1.5 │ │ Calendar   │
+                    └────────────────────┘ └──────────────┘ └────────────┘ └────────────┘
+```
 
 ---
 
 ## ⚡ Quickstart Guide (Local Setup)
 
-### 1. Clone Repository & Install Dependencies
+### 1. Clone & Install
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/<your-username>/healthcare-appointment-manager.git
 cd healthcare-appointment-manager
 
-# Install Backend & Frontend dependencies
-cd backend && npm install
-cd ../frontend && npm install
+# Install Backend dependencies
+cd backend
+npm install
+
+# Install Frontend dependencies
+cd ../frontend
+npm install
 cd ..
 ```
 
@@ -53,145 +81,160 @@ Copy `.env.example` to `backend/.env`:
 cp .env.example backend/.env
 ```
 
-Ensure your `backend/.env` contains your database connection string and secret keys:
+Ensure your `backend/.env` contains your configuration:
 ```env
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 
+# Database Connection (Neon.tech / Supabase / Local PostgreSQL)
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/healthcare_db?schema=public"
+
+# Redis (Upstash / Local Redis)
 REDIS_URL="redis://localhost:6379"
 
-JWT_SECRET="dev-super-secret-jwt-key-min-32-chars-long"
-JWT_REFRESH_SECRET="dev-super-secret-refresh-jwt-key-32-chars"
-DATA_ENCRYPTION_KEY="dev-secret-data-encryption-key-32-chars"
+# Security & Secrets (Min 32 characters)
+JWT_SECRET="7f8b9a1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a"
+JWT_REFRESH_SECRET="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+DATA_ENCRYPTION_KEY="f1e2d3c4b5a697887766554433221100aabbccddeeff00112233445566778899"
 
+# Google Gemini AI
 LLM_PROVIDER=gemini
-GEMINI_API_KEY="your-google-gemini-api-key"
+GEMINI_API_KEY="your-gemini-api-key"
 GEMINI_MODEL=gemini-1.5-flash
 
-EMAIL_PROVIDER=smtp
-SMTP_HOST=smtp.ethereal.email
-SMTP_PORT=587
-SMTP_USER=""
-SMTP_PASS=""
+# Email Service (Nodemailer / SMTP / Mock)
+EMAIL_PROVIDER=mock
+EMAIL_FROM="CareSync Clinic <appointments@caresync.clinic>"
 
-GOOGLE_CLIENT_ID="your-google-client-id"
+# Google Calendar OAuth 2.0
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 GOOGLE_REDIRECT_URI="http://localhost:5000/api/calendar/callback"
 
 SLOT_HOLD_DURATION_MINUTES=5
 ```
 
-### 3. Initialize Database Schema & Seed Data
+### 3. Initialize Database & Seed Demo Data
 ```bash
-# Generate Prisma Client & push schema to PostgreSQL
 cd backend
 npx prisma generate
 npx prisma db push
-
-# Seed Admin, 4 Specialist Doctors, 3 Patients, and Shifts
 npm run prisma:seed
 ```
 
-### 4. Run Application
+### 4. Start Development Servers
 ```bash
-# Terminal 1: Start Backend (Port 5000)
+# Terminal 1: Backend Server (Port 5000)
 cd backend
 npm run dev
 
-# Terminal 2: Start Frontend (Port 5173)
+# Terminal 2: Frontend Client (Port 5173)
 cd frontend
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Visit **`http://localhost:5173`** in your browser.
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts (1-Click Login Available)
+## 🔑 Pre-Seeded Demo Accounts (1-Click Login)
 
-| Role | Email | Password | Description |
+The login screen (`/login`) includes **1-Click Quick Demo Login buttons** pre-configured for evaluation:
+
+| Role | Email | Password | Pre-Loaded Context |
 | :--- | :--- | :--- | :--- |
-| **Patient** | `alice@example.com` | `Patient@123` | Active patient with past visits & prescriptions |
-| **Doctor** | `dr.sarah@clinic.com` | `Doctor@123` | Cardiologist with consultation queue & shifts |
+| **Patient** | `alice@example.com` | `Patient@123` | Active appointments, symptom histories & prescriptions |
+| **Doctor** | `dr.sarah@clinic.com` | `Doctor@123` | Cardiologist with active queue & configured shifts |
 | **Doctor** | `dr.marcus@clinic.com` | `Doctor@123` | Dermatologist |
 | **Admin** | `admin@clinic.com` | `Admin@123` | Clinic manager with full analytics & leave access |
 
-*Note: You can also use the 1-click Quick Login buttons on the `/login` screen.*
-
 ---
 
-## 🧪 Running Automated Test Suites
+## 🧪 Automated Testing Suite
 
 ```bash
 cd backend
 npm test
 ```
 
-Test coverage includes:
-- `auth.test.ts`: User registration, validation, login, and RBAC route protection.
-- `concurrency.test.ts`: Simultaneous slot holds and transactional booking collision prevention.
-- `leave-conflict.test.ts`: Admin leave conflict detection and patient notification cascade.
-- `llm-fallback.test.ts`: Gemini provider failure simulation and rule-based fallback generation.
-- `unit.test.ts`: Medication frequency parsing, break interval overlap math, and AES-256 token encryption.
+### Test Coverage Highlights:
+- **`auth.test.ts`**: User registration, password complexity validation, login, and RBAC route protection.
+- **`concurrency.test.ts`**: Simultaneous slot holds and transactional booking collision prevention (`SLOT_ALREADY_BOOKED`).
+- **`leave-conflict.test.ts`**: Admin leave conflict detection and patient notification cascade.
+- **`llm-fallback.test.ts`**: Gemini provider failure simulation and rule-based fallback generation.
+- **`unit.test.ts`**: Medication frequency parsing, break interval overlap math, and AES-256 token encryption.
 
 ---
 
 ## 📡 REST API Endpoints Catalog
 
 ### Authentication (`/api/auth`)
-- `POST /register` — Register a new patient account
-- `POST /login` — Authenticate user and issue JWT Access + Refresh tokens
-- `POST /refresh-token` — Rotate refresh token and issue new access token
-- `POST /logout` — Invalidate user session and revoke refresh tokens
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Register a new patient account |
+| `POST` | `/api/auth/login` | Authenticate user and issue JWT Access + Refresh tokens |
+| `POST` | `/api/auth/refresh-token` | Rotate refresh token and issue new access token |
+| `POST` | `/api/auth/logout` | Invalidate user session and revoke refresh tokens |
 
 ### Doctors & Availability (`/api/doctors`)
-- `GET /` — Search and filter specialists by specialization, keyword, and experience
-- `GET /specializations` — List all medical specialties
-- `GET /:id` — Retrieve doctor profile and weekly working hours
-- `GET /:id/availability?date=YYYY-MM-DD` — Dynamic available slot calculation
-- `GET /:id/available-dates?month=YYYY-MM` — Monthly calendar availability map
-- `POST /:id/working-hours` — Configure doctor shift hours and break intervals
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/doctors` | Search specialists by specialization, keyword, and fee |
+| `GET` | `/api/doctors/specializations` | List all medical specialties |
+| `GET` | `/api/doctors/:id` | Doctor profile and weekly working hours |
+| `GET` | `/api/doctors/:id/availability` | Dynamic slot calculation excluding breaks & past slots |
+| `GET` | `/api/doctors/:id/available-dates`| Monthly calendar availability map |
+| `POST` | `/api/doctors/:id/working-hours`| Configure doctor shift hours and break intervals |
 
 ### Appointments & Holds (`/api/appointments`)
-- `POST /hold` — Acquire 5-minute pessimistic hold on a slot
-- `DELETE /hold/:holdToken` — Release a held slot early
-- `POST /` — Confirm booking transaction from hold token with symptom intake
-- `GET /` — List consultations (filtered by user role and date range)
-- `GET /:id` — Get single appointment details
-- `PATCH /:id/cancel` — Cancel appointment with required reason
-- `PATCH /:id/reschedule` — Reschedule consultation using a new hold token
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/appointments/hold` | Acquire 5-minute pessimistic hold on a slot |
+| `DELETE`| `/api/appointments/hold/:token` | Release a held slot early |
+| `POST` | `/api/appointments` | Confirm booking transaction from hold token |
+| `GET` | `/api/appointments` | List consultations (filtered by user role) |
+| `GET` | `/api/appointments/:id` | Get single appointment details |
+| `PATCH`| `/api/appointments/:id/cancel` | Cancel appointment with required reason |
+| `PATCH`| `/api/appointments/:id/reschedule`| Reschedule consultation using a new hold token |
 
-### AI Summaries & Clinical Notes (`/api/appointments/:id`)
-- `GET /previsit-summary` — Doctor views AI pre-visit urgency assessment & questions
-- `POST /previsit-summary/retry` — Regenerate AI pre-visit analysis
-- `POST /visit-notes` — Doctor completes consultation, saves vitals, and issues Rx
-- `GET /postvisit-summary` — Patient views plain-language AI post-visit care plan
-- `POST /postvisit-summary/retry` — Regenerate AI post-visit summary
+### AI Summaries & Clinical Records (`/api/appointments/:id`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/appointments/:id/previsit-summary` | Doctor views AI pre-visit urgency & suggested questions |
+| `POST`| `/api/appointments/:id/previsit-summary/retry` | Regenerate AI pre-visit analysis |
+| `POST`| `/api/appointments/:id/visit-notes` | Doctor completes visit, records vitals, and issues Rx |
+| `GET` | `/api/appointments/:id/postvisit-summary` | Patient views plain-language AI post-visit care plan |
+| `POST`| `/api/appointments/:id/postvisit-summary/retry`| Regenerate AI post-visit summary |
 
 ### Prescriptions & Reminders (`/api/prescriptions` & `/api/reminders`)
-- `GET /prescriptions/my-prescriptions` — Patient prescription history
-- `GET /reminders/active` — Patient active medication dose schedules
-- `PATCH /reminders/:id/toggle` — Enable or pause medication reminder
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/prescriptions/my-prescriptions` | Patient prescription history |
+| `GET` | `/api/reminders/active` | Patient active medication dose schedules |
+| `PATCH`| `/api/reminders/:id/toggle` | Enable or pause medication reminder |
 
-### Google Calendar (`/api/calendar`)
-- `GET /connect` — Generate Google OAuth 2.0 consent URL
-- `GET /callback` — Handle Google OAuth token exchange & encryption
-- `DELETE /disconnect` — Revoke and remove Google Calendar connection
-- `GET /status` — Check user calendar connection status
-- `POST /sync/:appointmentId` — Manually re-sync appointment event
+### Google Calendar Integration (`/api/calendar`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/calendar/connect` | Generate Google OAuth 2.0 consent URL |
+| `GET` | `/api/calendar/callback` | Handle Google OAuth token exchange & encryption |
+| `DELETE`| `/api/calendar/disconnect` | Revoke and remove Google Calendar connection |
+| `GET` | `/api/calendar/status` | Check user calendar connection status |
+| `POST`| `/api/calendar/sync/:appointmentId` | Manually re-sync appointment event |
 
 ### Admin Console (`/api/admin`)
-- `GET /dashboard` — System analytics and appointment statistics
-- `POST /doctors` — Create new specialist profile & account
-- `POST /doctors/:id/leave` — Declare doctor leave & cascade conflict alerts
-- `GET /doctors/:id/leave` — View doctor leave history
-- `GET /users` — User directory with active status toggles
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/admin/dashboard` | System analytics and appointment statistics |
+| `POST`| `/api/admin/doctors` | Create new specialist profile & account |
+| `POST`| `/api/admin/doctors/:id/leave` | Declare doctor leave & cascade conflict alerts |
+| `GET` | `/api/admin/doctors/:id/leave` | View doctor leave history |
+| `GET` | `/api/admin/users` | User directory with active status toggles |
 
 ---
 
-## 🤖 Google Gemini AI Prompts Reference
+## 🤖 Google Gemini AI Prompts
 
 ### 1. Pre-Visit Clinical Analysis Prompt
 ```text
@@ -229,11 +272,12 @@ Follow-up Instructions:
 
 ---
 
-## 🌐 Vercel Deployment Configuration
+## 🌐 Vercel Cloud Deployment
 
-1. Connect your repository to **Vercel**.
-2. Configure environment variables in the Vercel Dashboard (copy from `backend/.env`).
-3. Deploy! The root `vercel.json` and `api/index.ts` automatically route `/api/*` to the serverless backend function and serve the compiled React Vite frontend.
+1. Push this repository to GitHub on branch `main`.
+2. Import the project into **[Vercel](https://vercel.com)**.
+3. Configure environment variables in the Vercel Dashboard (copy from `backend/.env`).
+4. Click **Deploy**. Vercel will build the frontend and serve the backend serverlessly via `api/index.ts` automatically!
 
 ---
 
@@ -250,5 +294,3 @@ Follow-up Instructions:
 
 ## 📄 License
 MIT License • Developed for Healthcare Evaluation Submission
-#   C a r e S y n c - C l i n i c  
- 
