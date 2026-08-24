@@ -5,6 +5,7 @@ import userRoutes from './user.routes.js';
 import doctorRoutes from './doctor.routes.js';
 import adminRoutes from './admin.routes.js';
 import appointmentRoutes from './appointment.routes.js';
+import prescriptionRoutes from './prescription.routes.js';
 
 const router = Router();
 
@@ -21,5 +22,8 @@ router.use('/admin', adminRoutes);
 
 // Appointments & Slot Holds
 router.use('/appointments', appointmentRoutes);
+
+// Prescriptions
+router.use('/prescriptions', prescriptionRoutes);
 
 export default router;
