@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { appointmentController } from '../controllers/appointment.controller.js';
+import { symptomController } from '../controllers/symptom.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validateRequest } from '../middleware/validation.middleware.js';
 import {
@@ -9,6 +10,7 @@ import {
   rescheduleAppointmentSchema,
   appointmentQuerySchema,
 } from '../validators/appointment.validator.js';
+import { submitSymptomsSchema } from '../validators/symptom.validator.js';
 
 const router = Router();
 
@@ -25,5 +27,9 @@ router.get('/', validateRequest({ query: appointmentQuerySchema }), appointmentC
 router.get('/:id', appointmentController.getAppointmentById);
 router.patch('/:id/cancel', validateRequest({ body: cancelAppointmentSchema }), appointmentController.cancelAppointment);
 router.patch('/:id/reschedule', validateRequest({ body: rescheduleAppointmentSchema }), appointmentController.rescheduleAppointment);
+
+// Symptoms Intake & Retrieval
+router.post('/:id/symptoms', validateRequest({ body: submitSymptomsSchema }), symptomController.submitSymptoms);
+router.get('/:id/symptoms', symptomController.getSymptoms);
 
 export default router;
