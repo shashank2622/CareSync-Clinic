@@ -3,6 +3,7 @@ import { slotRepository, SlotRepository } from '../repositories/slot.repository.
 import { doctorRepository, DoctorRepository } from '../repositories/doctor.repository.js';
 import { userRepository, UserRepository } from '../repositories/user.repository.js';
 import { emailService, EmailService } from './email.service.js';
+import { googleCalendarService, GoogleCalendarService } from '../integrations/google-calendar/google-calendar.service.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { logger } from '../utils/logger.js';
@@ -23,7 +24,8 @@ export class AppointmentService {
     private slotRepo: SlotRepository = slotRepository,
     private doctorRepo: DoctorRepository = doctorRepository,
     private userRepo: UserRepository = userRepository,
-    private email: EmailService = emailService
+    private email: EmailService = emailService,
+    private calendar: GoogleCalendarService = googleCalendarService
   ) {}
 
   private generateAppointmentNumber(): string {
@@ -166,6 +168,11 @@ export class AppointmentService {
         logger.warn(`Failed to dispatch booking confirmation email: ${err.message}`);
       });
 
+      // Asynchronously sync Google Calendar event (non-blocking)
+      this.calendar.syncBookingCreated(appointment.id).catch((err) => {
+        logger.warn(`Failed to sync Google Calendar for booking ${appointment.id}: ${err.message}`);
+      });
+
       return appointment;
     } catch (err: any) {
       if (err.message === 'SLOT_ALREADY_BOOKED') {
@@ -280,6 +287,11 @@ export class AppointmentService {
       logger.warn(`Failed to dispatch cancellation email: ${err.message}`);
     });
 
+    // Asynchronously remove Google Calendar event
+    this.calendar.syncBookingCancelled(id).catch((err) => {
+      logger.warn(`Failed to cancel Google Calendar event: ${err.message}`);
+    });
+
     return updated;
   }
 
@@ -325,6 +337,11 @@ export class AppointmentService {
     // Asynchronously dispatch reschedule emails
     this.email.sendRescheduleNotification(id, input.reason).catch((err) => {
       logger.warn(`Failed to dispatch reschedule email: ${err.message}`);
+    });
+
+    // Asynchronously update Google Calendar event
+    this.calendar.syncBookingRescheduled(id).catch((err) => {
+      logger.warn(`Failed to update Google Calendar event: ${err.message}`);
     });
 
     return updated;

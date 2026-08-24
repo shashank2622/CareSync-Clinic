@@ -7,6 +7,7 @@ import adminRoutes from './admin.routes.js';
 import appointmentRoutes from './appointment.routes.js';
 import prescriptionRoutes from './prescription.routes.js';
 import reminderRoutes from './reminder.routes.js';
+import calendarRoutes from './calendar.routes.js';
 
 const router = Router();
 
@@ -27,5 +28,8 @@ router.use('/appointments', appointmentRoutes);
 // Prescriptions & Reminders
 router.use('/prescriptions', prescriptionRoutes);
 router.use('/reminders', reminderRoutes);
+
+// Google Calendar Integration
+router.use('/calendar', calendarRoutes);
 
 export default router;
